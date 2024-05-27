@@ -1,7 +1,4 @@
 ##########Written By Liam Flaherty For ST558 HW2###########
-####still need to fix knitr in pt 2###
-
-
 #####1. Basic Vector Practice#####
 pre_bp=c(130, 128, 116, 124, 133,              #data provided#
          134, 118, 126, 114, 127,
@@ -32,13 +29,15 @@ treatment=data.frame(                          #Put everything into a dataframe#
   patient=names(pre_bp),
   pre_bp, 
   post_bp,
-  diff_bp)
+  diff_bp,
+  row.names=NULL)                              #don't show the name of the observations#
+  
 
 treatment[which(treatment$diff_bp<0),]         #Filter the df to those who decreased#
 
 treatment$low_bp=ifelse(treatment$post_bp<120, 
                         TRUE, FALSE)
-#knitr::kable(treatment)#
+knitr::kable(treatment)                        #display df in different format#
 
 
 
@@ -55,7 +54,8 @@ placebo=data.frame(                                     #mimick treatment df#
   pre_bp,
   post_bp,
   diff_bp=post_bp-pre_bp,                              
-  low_bp=ifelse(post_bp<120, TRUE, FALSE))             
+  low_bp=ifelse(post_bp<120, TRUE, FALSE),
+  row.names=NULL)             
 
 mylist=list(treatment=treatment, placebo=placebo)       #Place the df's together#
 
@@ -108,14 +108,14 @@ myfunction=function(l, func=mean) {       #list w/ 2 dfs, set default function t
   
   for (i in 1:length(a)) {                #apply function (no l/sappy yet)#
     b[(2*i)-1]=func(df1[,a[i]])           #no fear of hard-coding 2...#
-    b[(2*i)]=func(df2[,a[i]])             #...since input list is 2dfs##
+    b[(2*i)]=func(df2[,a[i]])             #...since input list is 2 dfs#
   }
   
   stat=deparse(substitute(func))          #get name of user inputted stat#
   
   names(b)=paste0(
-    rep(c(names(l)), length(a)),          #names of df's in list#
-    "_", rep(a,2), "_",                   #names of columns in df#
+    rep(names(l), length(a)),             #names of df's in list#
+    "_", rep(a, each=2), "_",             #names of columns in df#
      stat)                                #name of desired stat#
                 
 return(b)                                 #directions say named vector instead of list okay#
@@ -126,3 +126,4 @@ myfunction(mylist, var)                   #testing various functions#
 myfunction(mylist, sd)
 myfunction(mylist, min)
 myfunction(mylist, max)
+

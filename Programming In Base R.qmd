@@ -4,23 +4,191 @@ format: html
 editor: visual
 ---
 
-## Quarto
+## Part 1: Basic Vector Practice
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+We are given some data on patients who undergo a treatment. Their blood pressure pre and post-treatment is recorded below.
 
 ```{r}
-1 + 1
+pre_bp=c(130, 128, 116, 124, 133,
+         134, 118, 126, 114, 127, 
+         141, 138, 128, 140, 137, 
+         131, 120, 128, 139, 135) 
+post_bp=c(114, 98, 113, 99, 107, 
+          116, 113, 111, 119, 117, 
+          101, 119, 130, 122, 106, 
+          106, 124, 102, 117, 113)
 ```
 
-You can add options to executable code like this
+We are then asked to give names to the observations, which can easily be done with the `paste0` function.
 
 ```{r}
-#| echo: false
-2 * 2
+names(pre_bp)=paste0("Subject_", 1:length(pre_bp))
+names(post_bp)=paste0("Subject_", 1:length(post_bp))
+
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+Once we've named our observations, we then calculate the average difference in blood pressure for each observation after going through treatment. To practice filtering the vector of observations, we return all those subjects whose blood-pressure decreased, and then return the average difference in blood pressure after treatment *just for those observations who experienced a decrease in blood pressure*.
+
+```{r}
+diff_bp=post_bp-pre_bp                 #create new vector#
+mean(diff_bp)                          #-17#
+
+which(diff_bp<0)                       #specific circumstances#
+mean(diff_bp[which(diff_bp<0)])        #-20.64706#
+```
+
+## Part 2: Basic Data Frame Practice
+
+Now we want to put our vectors together in a dataframe which we will call `treatment`. Note that we can title a new column from within the `data.frame` function, which we do here with the `patient` vector.
+
+```{R}
+treatment=data.frame(                          
+  patient=names(pre_bp),
+  pre_bp, 
+  post_bp,
+  diff_bp,
+  row.names=NULL)                    #don't show the name of the observations#
+```
+
+Like Part 1, we are interested in those subjects who experienced a decrease in blood pressure. We can filter the dataframe in the same sort of way we filtered the vector, except now we make sure to specify the columns we want to return too (instead of `[]` with the vector, we use `[,]` with the dataframe).
+
+```{R}
+treatment[which(treatment$diff_bp<0),]      #return all columns#
+
+```
+
+New vectors can be named and added to our dataframe directly (`$` is not just for referencing of an existing vector, but also specifying a new one). Here we create a column of Boolean data and add it to our `treatment` dataframe (we could also use `cbind` or `data.frame` again if we wanted).
+
+```{r}
+treatment$low_bp=ifelse(treatment$post_bp<120, TRUE, FALSE)
+
+```
+
+As a matter of preference, we can show the entirety of this new dataframe in a different format with `knitr`.
+
+```{r}
+knitr::kable(treatment)                     
+```
+
+## Part 3: List Practice
+
+Now that we've explored vectors and dataframes, we move on to lists. To do so, we put together some new data on a population that didn't undergo a treatment but instead took a placebo. To make our lives easier in the long-run, and since we will henceforth access the data only through lists or dataframes, we have no reservations about using the same names for the vectors as we did in Part 1.
+
+```{R}
+pre_bp=c(138, 135, 147, 117, 152,                   #overwriting previous vector#
+         134, 114, 121, 131, 130)
+post_bp=c(105, 136, 123, 130, 134,                  #overwriting previous vector#
+          143, 135, 139, 120, 124)
+```
+
+We now create the same type of dataframe as we had in Part 2, this time calling it `placebo`. Since we've already shown the step-by-step way to do so, we can just do it in one go here.
+
+```{R}
+placebo=data.frame(                                     
+  patient=paste0("Placebo_Subject_", 1:length(pre_bp)),
+  pre_bp,
+  post_bp,
+  diff_bp=post_bp-pre_bp,                              
+  low_bp=ifelse(post_bp<120, TRUE, FALSE),
+  row.names=NULL)    
+```
+
+Now we place both the `treatment` and `placebo` dataframes together in a list. So that we can reference the names of the dataframes from the list in the future, we name the inputs to the list within the `list` function.
+
+```{R}
+mylist=list(treatment=treatment, placebo=placebo)
+```
+
+To practice accessing elements in a list, we show a few different methods. Note that `[i]` returns the $i^{\text{th}}$ element in the list *as a list*, while `[[[i]]` returns the $i^{\text{th}}$ element in the list as its own class (vectors are returned as vectors, dataframes as dataframes, etc.). Further note that we elect not to show the return of these calls, since they would just clutter our document. To do so, we preface the code chunk in Quarto with `{r, output=FALSE}` instead of `{r}`.
+
+```{r, output=FALSE}
+mylist[1]                                         #returns a list#
+mylist[[1]]                                       #returns a dataframe#
+mylist[["treatment"]]                             #other way to access df in list#
+mylist$treatment                                  #other way to access df in list#
+mylist[[-2]]                                      #other way to access df in list#
+```
+
+If we want to access specific parts of the dataframe, we can use an additional instance of `[]`.
+
+```{R}
+mylist[["placebo"]]["pre_bp"]                     #specific part of df from list#
+```
+
+Note that we can chain together `[[]]` to get more and more specific information of our list. For example, if we have a list of lists and want to access not just the column (like the above snippet), but a specific element in the column, we could do something like the below.
+
+```{R}
+newlist=list(1:10, mylist, letters[3])            #just for illustration#
+newlist[[2]][["placebo"]][["pre_bp"]][5]         
+```
+
+## Part 4: Control Flow Practice
+
+Suppose now that we want to add a new column to each dataframe within the list. We can initialize these columns by adding a placeholder for each element like so:
+
+```{r}
+mylist[["treatment"]]$status=character(nrow(treatment))  #initialize#
+mylist[["placebo"]]$status=character(nrow(placebo))      #initialize#
+```
+
+Now we want to fill the placeholders by looping through the elements (not best practice, just used to practice). The column being added is character data describing the post-treatment (or post-placebo) blood pressure for each observation. We use a dummy vector `a` as a copy of our existing column of interest. While this would not be optimal if we were dealing with lots of data (since it is performing an extra calculation each iteration of the loop), in this case we are fine trading speed for readability.
+
+```{r}
+for(i in 1:nrow(mylist[["treatment"]])) {                #just to practice 'for'# 
+  a=mylist[["treatment"]][["post_bp"]]                   #to make less cluttered#
+  if(a[i]>130) {                                       
+    mylist[["treatment"]][["status"]][i]="high"                                  
+  } else if (a[i]>120) {                               
+    mylist[["treatment"]][["status"]][i]="borderline"
+  } else {
+    mylist[["treatment"]][["status"]][i]="optimal"
+  }
+}
+
+for(i in 1:nrow(mylist[["placebo"]])) {                   #just to practice 'for'#
+  a=mylist[["placebo"]][["post_bp"]]                      #to make less cluttered#
+  if(a[i]>130) {                                       
+    mylist[["placebo"]][["status"]][i]="high"                                  
+  } else if (a[i]>120) {                               
+    mylist[["placebo"]][["status"]][i]="borderline"
+  } else {
+    mylist[["placebo"]][["status"]][i]="optimal"
+  }
+}
+```
+
+## Part 5: Function Writing
+
+Finally, we'd like to create a user-defined function (udf) that takes as inputs 1. a list with two dataframes and 2. a built-in R function. This udf should return the (built-in) R function applied to various vectors in each dataframe. In Part 3, we mentioned that we used the same variable names in both the `treatment` and `placebo` dataframes. Here we see why, as we only need to specify the variable names once inside the udf. We are instructed to return a named vector with names specifying the function that was applied to the various columns. We get this name with the `deparse(substitute())` section of the code. The only other portion of the udf that deserves pointing out is the care we take when `rep`licating our vector. We note that `rep(1:3, 3)` repeats the vector three times (i.e. returns `1 2 3 1 2 3 1 2 3`) while `rep(1:3, each=3)` repeats each element in the vector three teams before moving on to the next element (i.e. returns `1 1 1 2 2 2 3 3 3`).
+
+```{R}
+myfunction=function(l, func=mean) {       #list w/ 2 dfs, set default function to mean#
+  df1=l[[1]]; df2=l[[2]]
+  a=c("pre_bp", "post_bp", "diff_bp")     #assume same variable names in dfs#
+  b=vector()                              #initialize#
+  
+  for (i in 1:length(a)) {                #apply function (no l/sappy yet)#
+    b[(2*i)-1]=func(df1[,a[i]])           #no fear of hard-coding 2...#
+    b[(2*i)]=func(df2[,a[i]])             #...since input list is 2 dfs#
+  }
+  
+  stat=deparse(substitute(func))          #get name of user inputted stat#
+  
+  names(b)=paste0(
+    rep(names(l), length(a)),             #names of df's in list#
+    "_", rep(a, each=2), "_",             #names of columns in df#
+     stat)                                #name of desired stat#
+                
+return(b)                                 #directions say named vector instead of list okay#
+}
+```
+
+To test our udf, we try a few different functions. Notably, we crafted the udf to have a default function of `mean` which is shown in the first example.
+
+```{R}
+myfunction(mylist)                        #testing to see defaults work#
+myfunction(mylist, var)                   #testing various non-default functions#
+myfunction(mylist, sd)
+myfunction(mylist, min)
+myfunction(mylist, max)
+```
